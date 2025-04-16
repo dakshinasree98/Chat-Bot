@@ -2,9 +2,9 @@ import os
 import re
 import random
 import asyncio
+import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 from datetime import datetime, timedelta
-from google import genai
-from google.genai import types
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from twilio.twiml.messaging_response import MessagingResponse
@@ -15,9 +15,7 @@ load_dotenv()
 app = Flask(__name__)
 
 # Set up Gemini API key from .env file
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY"),
-)
+client = genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Neon DB connection parameters
 NEON_DB_USER = os.getenv("NEON_DB_USER")
@@ -89,10 +87,9 @@ async def update_conversation_summary(phone_number, user_message, ai_response):
                 f"Format as 'Summary of conversation so far: [your summary]. Last message from user: {user_message}'"
             )
             
-            summary_response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=[prompt]
-            ).text.strip()
+            model = genai.GenerativeModel('gemini-1.5-flash')  # Updated model name
+            response = model.generate_content(prompt)
+            response_text = response.text.strip()
             
             # Update the existing record
             await conn.execute(
@@ -381,10 +378,10 @@ Remember, you're the friendly voice of Narayan Shiva Sansthan Foundation on What
     )
 
     contents = [query]
-    response = client.models.generate_content(
-        model=model,
+    model = genai.GenerativeModel(model_name=model)
+    response = model.generate_content(
         contents=contents,
-        config=generate_config
+        generation_config=generate_config
     )
 
     response_text = response.text if response.text else "Sorry, I couldn't generate a response at the moment."
